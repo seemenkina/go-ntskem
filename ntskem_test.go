@@ -1,6 +1,8 @@
 package go_ntskem
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGenerateKey(t *testing.T) {
 
