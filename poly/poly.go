@@ -47,33 +47,6 @@ func FisherYatesShuffle(slice []uint16) []uint16 {
 	return slice
 }
 
-// Check the validity of Goppa polynomial
-// 1 - g0 != 0
-// 2 - Goppa polynomial  has no roots in F{2^m}. Check by Additive FFT
-// 3 - Goppa polynomial  has no repeated roots in any extension 􏰀field.  Check by GCD(G)
-func CheckGoppaPoly(g []uint16) bool {
-
-	if g[0] == 0 {
-		return false
-	}
-	if !checkFft(g) {
-		return false
-	}
-
-	// if (formal_derivative_poly(Gz, Dz)) {
-	// 	if (gcd_poly(ff2m, Gz, Dz, Fz)) {
-	// 		status = (Fz->degree < 1);
-	// 	}
-	// }
-
-	return true
-}
-
-// Return true, if Goppa polynomial  has roots in  F{2^m}
-func checkFft(pol []uint16) bool {
-	return false
-}
-
 // Partition the vectors a and h. Return a = (ab|ac), h = (hb|hc). Parts aa and ha of length k - l
 func PartVectors(a, h []uint16) ([]uint16, []uint16) {
 	return a[k-l:], h[k-l:]
