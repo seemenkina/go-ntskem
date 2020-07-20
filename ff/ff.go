@@ -1,17 +1,17 @@
 package ff
 
 type FF struct {
-	m     int
-	basis []uint16
+	M     int
+	Basis []uint16
 }
 
 func (ff2 *FF) New(m int) {
-	ff2.m = m
+	ff2.M = m
 	basis := make([]uint16, m)
 	for i := 0; i < m; i++ {
 		basis[m-i-1] = 1 << i
 	}
-	ff2.basis = basis
+	ff2.Basis = basis
 }
 
 func (ff2 *FF) Add(a, b uint16) uint16 {
@@ -86,6 +86,40 @@ func reduce(a uint32) uint16 {
 	a ^= buf >> 12
 
 	return uint16(a & 0xFFF)
+}
+
+// Check the validity of Goppa polynomial
+// 1 - g0 != 0
+// 2 - Goppa polynomial  has no roots in F{2^m}. Check by Additive FFT
+// 3 - Goppa polynomial  has no repeated roots in any extension 􏰀field.  Check by GCD(G)
+func (ff2 *FF) CheckGoppaPoly(g []uint16) bool {
+
+	if g[0] == 0 {
+		return false
+	}
+	if !ff2.checkFft(g) {
+		return false
+	}
+
+	// if (formal_derivative_poly(Gz, Dz)) {
+	// 	if (gcd_poly(ff2m, Gz, Dz, Fz)) {
+	// 		status = (Fz->degree < 1);
+	// 	}
+	// }
+
+	return true
+}
+
+// Return true, if Goppa polynomial  has roots in  F{2^m}
+func (ff2 *FF) checkFft(pol []uint16) bool {
+	w := ff2.AdaptiveFft(pol)
+
+	for i := 0; i < ff2.M; i++ {
+		if w[i] == 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func (ff2 *FF) AdaptiveFft(G []uint16) []uint16 {
