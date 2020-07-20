@@ -87,3 +87,12 @@ func reduce(a uint32) uint16 {
 
 	return uint16(a & 0xFFF)
 }
+
+func (ff2 *FF) AdaptiveFft(G []uint16) []uint16 {
+
+	return nil
+}
+
+func TaylorExpansion() {
+
+}

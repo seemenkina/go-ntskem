@@ -74,14 +74,6 @@ func checkFft(pol []uint16) bool {
 	return false
 }
 
-func AdaptiveFft(fx []uint16, A []uint16) {
-
-}
-
-func TaylorExpansion() {
-
-}
-
 // Partition the vectors a and h. Return a = (ab|ac), h = (hb|hc). Parts aa and ha of length k - l
 func PartVectors(a, h []uint16) ([]uint16, []uint16) {
 	return a[k-l:], h[k-l:]
