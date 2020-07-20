@@ -48,16 +48,15 @@ func (nk *NTSKEM) GenerateKey() {
 
 	// Step 1: Generate Goppa polynomial of degree τ
 	g := poly.GenerateGoppaPol(tau)
-	for !poly.CheckGoppaPoly(g) {
+	for !nk.ff.CheckGoppaPoly(g) {
 		g = poly.GenerateGoppaPol(tau)
 	}
 	// Step 2: Randomly generate a permutation vector p of length n
 	p := poly.GeneratePermutVector()
 
 	// Step 3: Construct a generator matrix
-
-	a := make([]uint16, nk.n)
-	h := make([]uint16, nk.n)
+	Q := matrix.MatrixFF{}
+	a, h := Q.CreateMatrixG(g, p, nk.ff, tau)
 
 	// Step 4: Generate random number of length l
 	buf := make([]byte, l/8)
@@ -68,7 +67,7 @@ func (nk *NTSKEM) GenerateKey() {
 	aSt, hSt := poly.PartVectors(a, h)
 
 	pk := PublicKey{
-		Q:   nil,
+		Q:   Q,
 		tau: tau,
 		l:   l,
 	}
