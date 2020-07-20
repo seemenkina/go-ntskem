@@ -8,7 +8,8 @@ import (
 
 
 //TODO: BitArrays Type
-//		Decapsulation: Operations in fields
+//	Decapsulation: Operations in fields
+//	Change math/rand to crypto/rand
 func main() {
 	seed := rand.NewSource(time.Now().UnixNano())
 	random := rand.New(seed)
