@@ -8,7 +8,6 @@ import (
 )
 
 // TODO: BitArrays Type
-//	Decapsulation: Operations in fields
 //	Change math/rand to crypto/rand
 func main() {
 	seed := rand.NewSource(time.Now().UnixNano())
@@ -39,7 +38,7 @@ func main() {
 		h[i] = uint16(random.Intn(3))
 	}
 	var kr, c = Encapsulation(3328, 256, 4096, 64, Q)
-	// Decapsulation(a,h,c,256,712, 64)
+	Decapsulation(a,h,c,256,712, 64)
 
 	print(kr)
 	print(c)
