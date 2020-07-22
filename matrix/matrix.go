@@ -40,11 +40,6 @@ func (mff *MatrixFF) Copy() *MatrixFF {
 }
 
 func (mff *MatrixFF) IsEqual(second *MatrixFF) bool {
-	// if mff.nRows != second.nRows || mff.nColumns != second.nColumns || mff == nil || second == nil {
-	// 	return false
-	// }
-	// return reflect.DeepEqual(mff.m, second.m)
-
 	return reflect.DeepEqual(mff, second)
 }
 

@@ -12,11 +12,8 @@ import (
 )
 
 const (
-	// m   = 12 // m = log n
 	tau = 64 // tau = (d - 1) / 2
-	// n   = 1 << m
-	// k   = n - tau*m
-	l = 256
+	l   = 256
 )
 
 type PublicKey struct {
