@@ -13,8 +13,8 @@ const (
 	m   = 12 // m = log n
 	tau = 64 // tau = (d - 1) / 2
 	n   = 1 << m
-	k   = n - tau*m
-	l   = 256
+	// k   = n - tau*m
+	l = 256
 )
 
 type PublicKey struct {
@@ -38,7 +38,7 @@ type NTSKEM struct {
 	n       int
 }
 
-func (nk *NTSKEM) New(m, l int) {
+func (nk *NTSKEM) New(m int) {
 	nk.ff.New(m)
 	nk.n = 1 << m
 }
@@ -47,16 +47,18 @@ func (nk *NTSKEM) New(m, l int) {
 func (nk *NTSKEM) GenerateKey() {
 
 	// Step 1: Generate Goppa polynomial of degree τ
-	g := poly.GenerateGoppaPol(tau)
-	for !nk.ff.CheckGoppaPoly(g) {
-		g = poly.GenerateGoppaPol(tau)
+	g := poly.Polynomial{}
+	g.GenerateGoppaPol(tau, 1<<nk.ff.M)
+	for !nk.ff.CheckGoppaPoly(&g) {
+		g := poly.Polynomial{}
+		g.GenerateGoppaPol(tau, 1<<nk.ff.M)
 	}
 	// Step 2: Randomly generate a permutation vector p of length n
 	p := poly.GeneratePermutVector()
 
 	// Step 3: Construct a generator matrix
 	Q := matrix.MatrixFF{}
-	a, h := Q.CreateMatrixG(g, p, nk.ff, tau)
+	a, h := Q.CreateMatrixG(&g, p, nk.ff, tau)
 
 	// Step 4: Generate random number of length l
 	buf := make([]byte, l/8)

@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/seemenkina/go-ntskem/ff"
+	"github.com/seemenkina/go-ntskem/poly"
 )
 
 type MatrixFF struct {
@@ -76,7 +77,7 @@ func (mff *MatrixFF) ReduceRowEchelon(ff2 *ff.FF) int {
 		}
 		mff.m[i], mff.m[r] = mff.m[r], mff.m[i]
 		f := ff2.Inv(mff.m[r][lead])
-		for j, _ := range mff.m[r] {
+		for j := range mff.m[r] {
 			mff.m[r][j] = ff2.Mul(mff.m[r][j], f)
 		}
 		for i = 0; i < mff.nRows; i++ {
@@ -105,7 +106,7 @@ func (mff *MatrixFF) GetRank() int {
 	return rank
 }
 
-func (mff *MatrixFF) CreateMatrixG(poly, p []uint16, ff2 *ff.FF, degree int) ([]uint16, []uint16) {
+func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF, degree int) ([]uint16, []uint16) {
 	n := 1 << ff2.M
 	k := n - degree*ff2.M
 	a := make([]uint16, n)
@@ -124,7 +125,7 @@ func (mff *MatrixFF) CreateMatrixG(poly, p []uint16, ff2 *ff.FF, degree int) ([]
 		a[i] = aPr[p[i]]
 	}
 
-	hPr = ff2.AdaptiveFft(poly)
+	hPr = ff2.AdaptiveFft(pol)
 	if hPr == nil {
 		return nil, nil
 	}
@@ -137,17 +138,16 @@ func (mff *MatrixFF) CreateMatrixG(poly, p []uint16, ff2 *ff.FF, degree int) ([]
 	H.New(uint32(degree*ff2.M), n)
 
 	for i := 0; i < n; i++ {
-		hPr[i] = 0
+		hPr[i] = 1
 	}
 
 	for i := 0; i < degree; i++ {
 		for j := 0; j < n; j++ {
-			e := uint16(ff2.M)
+			e := uint16(ff2.M) - 1
 			for e > 0 {
-				f := ff2.Mul(hPr[i], h[j])
+				f := ff2.Mul(hPr[j], h[j])
 				if f&(1<<e) != 0 {
-					// TODO: swap element
-					// r := i*ff2.M + uint16(ff2.M - e - 1)
+					H.m[i*ff2.M+(ff2.M-int(e)-1)][j] = uint16(j)
 				}
 				e--
 			}
@@ -155,21 +155,28 @@ func (mff *MatrixFF) CreateMatrixG(poly, p []uint16, ff2 *ff.FF, degree int) ([]
 		}
 	}
 
-	// Step 3c
-
 	rank := H.ReduceRowEchelon(ff2)
 	if n-degree*ff2.M != n-rank {
 		return nil, nil
 	}
 
-	// Step 4d
+	for j, i := 0, int(H.nRows-1); i >= 0; i-- {
+		for H.m[i][int(H.nColumns)-j-1] == 0 {
+			j++
+		}
+		H.ColumnSwap(k+i, int(H.nColumns)-j-1)
+
+		p[k+i], p[int(H.nColumns)-j-1] = p[int(H.nColumns)-j-1], p[k+i]
+		a[k+i], a[int(H.nColumns)-j-1] = a[int(H.nColumns)-j-1], a[k+i]
+		h[k+i], h[int(H.nColumns)-j-1] = h[int(H.nColumns)-j-1], h[k+i]
+	}
 
 	Q := MatrixFF{}
 
 	Q.New(k, n-k)
 	for i := 0; i < n-k; i++ {
 		for j := 0; j < k; j++ {
-			// set bit
+			Q.m[j][i] = H.m[j][j]
 		}
 	}
 
