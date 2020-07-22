@@ -5,7 +5,9 @@ import (
 )
 
 func TestGenerateKey(t *testing.T) {
-
+	nts := NTSKEM{}
+	nts.New(12)
+	nts.GenerateKey()
 }
 
 func TestEncapsulate(t *testing.T) {

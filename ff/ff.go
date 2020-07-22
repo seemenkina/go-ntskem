@@ -1,6 +1,8 @@
 package ff
 
-import "github.com/seemenkina/go-ntskem/poly"
+import (
+	"github.com/seemenkina/go-ntskem/poly"
+)
 
 type FF struct {
 	M     int
@@ -99,7 +101,7 @@ func (ff2 *FF) CheckGoppaPoly(g *poly.Polynomial) bool {
 	if g.Pol[0] == 0 {
 		return false
 	}
-	if !ff2.checkFft(g) {
+	if ff2.HasRoots(g) {
 		return false
 	}
 
@@ -131,6 +133,7 @@ func (ff2 *FF) Derivative(g *poly.Polynomial) *poly.Polynomial {
 	dx.SetDegree(g.GetDegree() - 1)
 	for i := 0; i < g.GetDegree(); i++ {
 		if dx.Pol[g.GetDegree()-i-1] == 0 {
+			dx.SetDegree(dx.GetDegree() - 1)
 			break
 		}
 		dx.SetDegree(dx.GetDegree() - 1)
@@ -139,11 +142,11 @@ func (ff2 *FF) Derivative(g *poly.Polynomial) *poly.Polynomial {
 }
 
 func (ff2 *FF) GCD(f, g *poly.Polynomial) *poly.Polynomial {
-	if f == nil {
+	if f.GetDegree() < 1 {
 		return g
 	}
 
-	if g == nil {
+	if g.GetDegree() < 1 {
 		return f
 	}
 
@@ -151,26 +154,65 @@ func (ff2 *FF) GCD(f, g *poly.Polynomial) *poly.Polynomial {
 		g, f = f, g
 	}
 
-	return ff2.GCD(f, g.ModuloReduce(f, ff2))
+	return ff2.GCD(f, ff2.ModuloReduce(g, f))
+}
+
+func (ff2 *FF) ModuloReduce(pol, mod *poly.Polynomial) *poly.Polynomial {
+	for pol.GetDegree() >= mod.GetDegree() {
+		a := ff2.Mul(pol.Pol[pol.GetDegree()], ff2.Inv(mod.Pol[mod.GetDegree()]))
+		j := pol.GetDegree() - mod.GetDegree()
+		for i := 0; i < mod.GetDegree(); i, j = i+1, j+1 {
+			if mod.Pol[i] != 0 {
+				pol.Pol[j] = ff2.Add(pol.Pol[j], ff2.Mul(mod.Pol[i], a))
+			}
+		}
+		pol.Pol[j] = 0
+		for pol.GetDegree() >= 0 && (pol.Pol[pol.GetDegree()] != 0) {
+			pol.SetDegree(pol.GetDegree() - 1)
+		}
+	}
+
+	return pol
 }
 
 // Return true, if Goppa polynomial  has roots in  F{2^m}
-func (ff2 *FF) checkFft(pol *poly.Polynomial) bool {
-	w := ff2.AdaptiveFft(pol)
-
-	for i := 0; i < ff2.M; i++ {
-		if w[i] == 0 {
-			return false
+func (ff2 *FF) HasRoots(pol *poly.Polynomial) bool {
+	for i := 0; i < 1<<ff2.M; i++ {
+		roots := ff2.PolynomialInPointer(pol, uint16(i))
+		if roots == 0 {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-func (ff2 *FF) AdaptiveFft(pol *poly.Polynomial) []uint16 {
-
-	return nil
+func (ff2 *FF) Roots(pol *poly.Polynomial) []uint16 {
+	roots := make([]uint16, 1<<ff2.M)
+	for i := 0; i < 1<<ff2.M; i++ {
+		point := ff2.CalculatePoint(uint16(i))
+		roots[i] = ff2.PolynomialInPointer(pol, point)
+	}
+	return roots
+}
+func (ff2 *FF) CalculatePoint(b uint16) uint16 {
+	point := b & (1 << ff2.M)
+	for i := 0; i < ff2.M-1; i++ {
+		point = ff2.Add(point, ff2.Mul(b&1, ff2.Basis[i]))
+		b = b >> 1
+	}
+	return point
 }
 
-func TaylorExpansion() {
+func (ff2 *FF) PolynomialInPointer(pol *poly.Polynomial, point uint16) uint16 {
+	if point == 0 {
+		return pol.Pol[0]
+	}
 
+	x := point
+	y := pol.Pol[0]
+	for i := 1; i <= pol.GetDegree(); i++ {
+		y = ff2.Add(y, ff2.Mul(x, pol.Pol[i]))
+		x = ff2.Mul(x, point)
+	}
+	return y
 }

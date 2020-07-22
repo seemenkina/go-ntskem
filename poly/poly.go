@@ -4,8 +4,6 @@ import (
 	cr "crypto/rand"
 	"math/rand"
 	"time"
-
-	"github.com/seemenkina/go-ntskem/ff"
 )
 
 const (
@@ -48,7 +46,7 @@ func (pl *Polynomial) GenerateGoppaPol(tau, size int) {
 	g := Polynomial{}
 	g.New(size)
 	g.SetDegree(tau)
-	for i := 0; i < tau; i++ {
+	for i := 0; i <= tau; i++ {
 		buf := make([]byte, 2)
 		_, _ = cr.Read(buf)
 		g.Pol[i] = uint16((buf[0] << (m - 8)) | (buf[1] >> (m - 8)))
@@ -59,30 +57,10 @@ func (pl *Polynomial) GenerateGoppaPol(tau, size int) {
 	pl.Pol = g.Pol
 }
 
-func (pl *Polynomial) ModuloReduce(mod *Polynomial, ff2 *ff.FF) *Polynomial {
-
-	for pl.degree >= mod.degree {
-		a := ff2.Mul(pl.Pol[pl.degree], ff2.Inv(mod.Pol[mod.degree]))
-		j := pl.degree - mod.degree
-		for i := 0; i < mod.degree; i++ {
-			if mod.Pol[i] != 0 {
-				pl.Pol[j] = ff2.Add(pl.Pol[j], ff2.Mul(mod.Pol[i], a))
-			}
-			j++
-		}
-		pl.Pol[j] = 0
-		for pl.degree >= 0 && pl.Pol[pl.degree] != 0 {
-			pl.degree--
-		}
-	}
-
-	return pl
-}
-
 // Generate a length n permutation vector p
 func GeneratePermutVector() []uint16 {
 	p := make([]uint16, n)
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < n; i++ {
 		p[i] = uint16(i)
 	}
 	p = FisherYatesShuffle(p)

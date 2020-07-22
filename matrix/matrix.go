@@ -76,13 +76,15 @@ func (mff *MatrixFF) ReduceRowEchelon(ff2 *ff.FF) int {
 			}
 		}
 		mff.m[i], mff.m[r] = mff.m[r], mff.m[i]
-		f := ff2.Inv(mff.m[r][lead])
-		for j := range mff.m[r] {
-			mff.m[r][j] = ff2.Mul(mff.m[r][j], f)
+		if mff.m[r][lead] != 0 {
+			f := ff2.Inv(mff.m[r][lead])
+			for j := range mff.m[r] {
+				mff.m[r][j] = ff2.Mul(mff.m[r][j], f)
+			}
 		}
 		for i = 0; i < mff.nRows; i++ {
 			if i != r {
-				f = mff.m[i][lead]
+				f := mff.m[i][lead]
 				for j, e := range mff.m[r] {
 					mff.m[i][j] = ff2.Add(mff.m[i][j], ff2.Mul(e, f))
 				}
@@ -118,14 +120,14 @@ func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF,
 	for i := 0; i < n; i++ {
 		aPr[i] = 0
 		for j := 0; j < ff2.M; j++ {
-			aPr[i] ^= ((i & (1 << j)) >> j) * ff2.Basis[j]
+			aPr[i] ^= uint16((i&(1<<j))>>j) * ff2.Basis[j]
 		}
 	}
 	for i := 0; i < n; i++ {
 		a[i] = aPr[p[i]]
 	}
 
-	hPr = ff2.AdaptiveFft(pol)
+	hPr = ff2.Roots(pol)
 	if hPr == nil {
 		return nil, nil
 	}
@@ -135,7 +137,7 @@ func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF,
 	}
 
 	H := MatrixFF{}
-	H.New(uint32(degree*ff2.M), n)
+	H.New(uint32(degree*ff2.M), uint32(n))
 
 	for i := 0; i < n; i++ {
 		hPr[i] = 1
@@ -161,8 +163,10 @@ func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF,
 	}
 
 	for j, i := 0, int(H.nRows-1); i >= 0; i-- {
-		for H.m[i][int(H.nColumns)-j-1] == 0 {
-			j++
+		for j < int(H.nColumns)-1 {
+			if H.m[i][int(H.nColumns)-j-1] == 0 {
+				j++
+			}
 		}
 		H.ColumnSwap(k+i, int(H.nColumns)-j-1)
 
@@ -173,16 +177,16 @@ func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF,
 
 	Q := MatrixFF{}
 
-	Q.New(k, n-k)
+	Q.New(uint32(k), uint32(n-k))
 	for i := 0; i < n-k; i++ {
 		for j := 0; j < k; j++ {
-			Q.m[j][i] = H.m[j][j]
+			Q.m[j][i] = H.m[i][j]
 		}
 	}
 
 	mff.nRows = Q.nRows
 	mff.nColumns = Q.nColumns
-	copy(mff.m, Q.m)
+	mff.m = Q.m
 
 	return a, h
 }

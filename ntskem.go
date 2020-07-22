@@ -3,6 +3,8 @@ package go_ntskem
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"strconv"
+	"strings"
 
 	ff2 "github.com/seemenkina/go-ntskem/ff"
 	"github.com/seemenkina/go-ntskem/matrix"
@@ -39,6 +41,7 @@ type NTSKEM struct {
 }
 
 func (nk *NTSKEM) New(m int) {
+	nk.ff = &ff2.FF{}
 	nk.ff.New(m)
 	nk.n = 1 << m
 }
@@ -46,12 +49,25 @@ func (nk *NTSKEM) New(m int) {
 // GenerateKey returns a new public/private key pair
 func (nk *NTSKEM) GenerateKey() {
 
-	// Step 1: Generate Goppa polynomial of degree τ
+	// // Step 1: Generate Goppa polynomial of degree τ
+	// g := poly.Polynomial{}
+	// g.GenerateGoppaPol(tau, 1<<nk.ff.M)
+	// for !nk.ff.CheckGoppaPoly(&g) {
+	// 	g := poly.Polynomial{}
+	// 	g.GenerateGoppaPol(tau, 1<<nk.ff.M)
+	// }
+
 	g := poly.Polynomial{}
-	g.GenerateGoppaPol(tau, 1<<nk.ff.M)
-	for !nk.ff.CheckGoppaPoly(&g) {
-		g := poly.Polynomial{}
-		g.GenerateGoppaPol(tau, 1<<nk.ff.M)
+	g.New(1 << nk.ff.M)
+	g.SetDegree(tau)
+
+	rawHex := "1EE 677 162 5EC 23B AA7 076 A65 A3B 519 000 B04 F3C E70 504 C07 B46 BC3 045 BAA 95B 807 6DD EE4 FF8 B02 362 500 077 42D 6F3 BB0 163 049 D0E D90 165 FDF 1A9 83D FCA CC9 FB4 C08 110 84B 0AB 330 9E3 985 DE7 17B 2A4 A95 9C6 BF1 DD8 8A9 2AC 652 4ED 2A2 CEA D1C 001"
+	rawHex = strings.Replace(rawHex, " ", "", -1)
+	// rawHex = strings.ToLower(rawHex)
+	for i := 0; len(rawHex) > 0; i++ {
+		b, _ := strconv.ParseUint(rawHex[:3], 16, 64)
+		g.Pol[i] = uint16(b)
+		rawHex = rawHex[3:]
 	}
 	// Step 2: Randomly generate a permutation vector p of length n
 	p := poly.GeneratePermutVector()
