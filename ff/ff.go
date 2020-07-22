@@ -1,5 +1,7 @@
 package ff
 
+import "github.com/seemenkina/go-ntskem/poly"
+
 type FF struct {
 	M     int
 	Basis []uint16
@@ -92,26 +94,68 @@ func reduce(a uint32) uint16 {
 // 1 - g0 != 0
 // 2 - Goppa polynomial  has no roots in F{2^m}. Check by Additive FFT
 // 3 - Goppa polynomial  has no repeated roots in any extension 􏰀field.  Check by GCD(G)
-func (ff2 *FF) CheckGoppaPoly(g []uint16) bool {
+func (ff2 *FF) CheckGoppaPoly(g *poly.Polynomial) bool {
 
-	if g[0] == 0 {
+	if g.Pol[0] == 0 {
 		return false
 	}
 	if !ff2.checkFft(g) {
 		return false
 	}
 
-	// if (formal_derivative_poly(Gz, Dz)) {
-	// 	if (gcd_poly(ff2m, Gz, Dz, Fz)) {
-	// 		status = (Fz->degree < 1);
-	// 	}
-	// }
+	dx := ff2.Derivative(g)
+	if dx != nil {
+		gcd := ff2.GCD(g, dx)
+		if gcd == nil || gcd.GetDegree() < 1 {
+			return false
+		}
+	}
 
 	return true
 }
 
+func (ff2 *FF) Derivative(g *poly.Polynomial) *poly.Polynomial {
+	dx := poly.Polynomial{}
+	dx.New(1 << ff2.M)
+
+	if dx.Size() < g.Size()-1 {
+		return nil
+	}
+
+	for i := 0; i < g.GetDegree(); i++ {
+		dx.Pol[i] = 0
+		if (i & 1) == 0 {
+			dx.Pol[i] = g.Pol[i+1]
+		}
+	}
+	dx.SetDegree(g.GetDegree() - 1)
+	for i := 0; i < g.GetDegree(); i++ {
+		if dx.Pol[g.GetDegree()-i-1] == 0 {
+			break
+		}
+		dx.SetDegree(dx.GetDegree() - 1)
+	}
+	return &dx
+}
+
+func (ff2 *FF) GCD(f, g *poly.Polynomial) *poly.Polynomial {
+	if f == nil {
+		return g
+	}
+
+	if g == nil {
+		return f
+	}
+
+	if g.GetDegree() < f.GetDegree() {
+		g, f = f, g
+	}
+
+	return ff2.GCD(f, g.ModuloReduce(f, ff2))
+}
+
 // Return true, if Goppa polynomial  has roots in  F{2^m}
-func (ff2 *FF) checkFft(pol []uint16) bool {
+func (ff2 *FF) checkFft(pol *poly.Polynomial) bool {
 	w := ff2.AdaptiveFft(pol)
 
 	for i := 0; i < ff2.M; i++ {
@@ -122,7 +166,7 @@ func (ff2 *FF) checkFft(pol []uint16) bool {
 	return true
 }
 
-func (ff2 *FF) AdaptiveFft(G []uint16) []uint16 {
+func (ff2 *FF) AdaptiveFft(pol *poly.Polynomial) []uint16 {
 
 	return nil
 }
