@@ -58,7 +58,7 @@ func (pl *Polynomial) GenerateGoppaPol(tau, size int) {
 }
 
 // Generate a length n permutation vector p
-func GeneratePermutVector() []uint16 {
+func GeneratePermuteVector() []uint16 {
 	p := make([]uint16, n)
 	for i := 0; i < n; i++ {
 		p[i] = uint16(i)
@@ -78,7 +78,34 @@ func FisherYatesShuffle(slice []uint16) []uint16 {
 	return slice
 }
 
-// Partition the vectors a and h. Return a = (ab|ac), h = (hb|hc). Parts aa and ha of length k - l
-func PartVectors(a, h []uint16) ([]uint16, []uint16) {
-	return a[k-l:], h[k-l:]
+// Create a random vector of length n bits with
+// Hamming weight t
+func RandomVector(n uint16, t uint16) []uint16 {
+	e := make([]uint16, n-t)
+	for i := n - t; i < n; i++ {
+		e = append(e, 1)
+	}
+	// shuffle
+	seed := rand.NewSource(time.Now().UnixNano())
+	random := rand.New(seed)
+	for i := n - 1; i >= n-t; {
+		r := random.Intn(int(i))
+		e[i], e[r] = e[r], e[i]
+		i = i - 1
+	}
+	return e
+}
+
+// Polynom Sum
+// Использовать сумму из ff, m =1 ?
+func PolySum(BitArray1, BitArray2 []uint16) []uint16 {
+	if len(BitArray2) > len(BitArray1) {
+		BitArray1, BitArray2 = BitArray2, BitArray1
+	}
+	var SumArray = make([]uint16, len(BitArray1))
+	copy(SumArray, BitArray1)
+	for i := 0; i < len(BitArray2); i++ {
+		SumArray[i+len(BitArray1)-len(BitArray2)] ^= BitArray2[i]
+	}
+	return SumArray
 }

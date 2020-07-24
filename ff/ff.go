@@ -217,63 +217,61 @@ func (ff2 *FF) PolynomialInPointer(pol *poly.Polynomial, point uint16) uint16 {
 	return y
 }
 
-//added
-func (ff2 *FF) Pow (x, pow uint16) uint16{
-	var i uint16
-	var result uint16 = 1
-	for i=0; i < pow; i++ {
-		result=ff2.Mul(result,x)
+func (ff2 *FF) Pow(x, pow uint16) uint16 {
+	result := uint16(1)
+	for i := uint16(0); i < pow; i++ {
+		result = ff2.Mul(result, x)
 	}
 	return result
 }
-//added 
-func (ff2 *FF) BerlekampMasseyAlgorithm(s []uint16) (*poly.Polynomial, uint16){
-	var t = len(s) >> 1
-	var Sigma = make([]uint16, t+1)
-	var Beta = make([]uint16, t+1)
-	var fi = make([]uint16,t+1)
+
+func (ff2 *FF) BerlekampMasseyAlgorithm(s []uint16) (*poly.Polynomial, uint16) {
+	t := len(s) >> 1
+	Sigma := make([]uint16, t+1)
+	Beta := make([]uint16, t+1)
+	fi := make([]uint16, t+1)
 	Sigma[0] = 1
 	Beta[1] = 1
 
-	var d, delta uint16 = 1,1
-	var L, R uint16 = 0,0
+	var d, delta uint16 = 1, 1
+	var L, R uint16 = 0, 0
 
-	for i:=0; i < len(s); i++ {
-		for j:=0; j <= t && j < i; j++ {
+	for i := 0; i < len(s); i++ {
+		for j := 0; j <= t && j < i; j++ {
 			d = ff2.Add(d, ff2.Mul(Sigma[j], s[i-j]))
 		}
-		for j:=0; j <= t; j++ {
+		for j := 0; j <= t; j++ {
 			fi[j] = ff2.Add(ff2.Mul(delta, Sigma[j]), ff2.Mul(d, Beta[j]))
 		}
 
-		if d == 0 || uint16(i) < (L << 1) {
+		if d == 0 || uint16(i) < (L<<1) {
 			R++
-			for j:=t; j >0; j-- {
+			for j := t; j > 0; j-- {
 				Beta[j] = Beta[j-1]
 			}
 		} else {
-			R=0
+			R = 0
 			L = uint16(i) - L + 1
 			delta = d
-			for j:=t; j >0; j-- {
+			for j := t; j > 0; j-- {
 				Beta[j] = Sigma[j-1]
 			}
 		}
-		for i:=0; i < t+1; i++{
+		for i := 0; i < t+1; i++ {
 			Sigma[i] = fi[i]
 		}
 	}
-	SigmaRec:= poly.Polynomial{} ////
-	SigmaRec.New(t+1)
+	SigmaRec := poly.Polynomial{} // //
+	SigmaRec.New(t + 1)
 	SigmaRec.SetDegree(t)
 	for SigmaRec.GetDegree() > 0 && Sigma[SigmaRec.GetDegree()] == 0 {
-		SigmaRec.SetDegree(SigmaRec.GetDegree()-1)
+		SigmaRec.SetDegree(SigmaRec.GetDegree() - 1)
 	}
 	var inv = ff2.Inv(Sigma[0])
-	for i:=0; i <= SigmaRec.GetDegree(); i++ {
-		SigmaRec.Pol[i] = ff2.Mul(Sigma[SigmaRec.GetDegree() - i], inv)
+	for i := 0; i <= SigmaRec.GetDegree(); i++ {
+		SigmaRec.Pol[i] = ff2.Mul(Sigma[SigmaRec.GetDegree()-i], inv)
 	}
-	var xi uint16 = 0
+	xi := uint16(0)
 	if uint16(SigmaRec.GetDegree()) > (uint16(t) - (R >> 1)) {
 		xi = 1
 	}
