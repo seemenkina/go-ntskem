@@ -185,3 +185,24 @@ func (mff *MatrixFF) CreateMatrixG(pol *poly.Polynomial, p []uint16, ff2 *ff.FF,
 
 	return a, h
 }
+
+//added
+func (mff *MatrixFF) PolyOnMatriceMult (poly []uint16) []uint16{
+	result := make ([]uint16, len(mff.m[0]))
+	for i:=0; i < len(mff.m); i++{
+		for j:=0; j < len(mff.m[i]); j++{
+			result[j] ^= poly[i] * mff.m[i][j]
+		}
+	}
+	return result
+}
+//added
+func (mff *MatrixFF) CreateMatrixH(a,h []uint16, ff ff.FF,) {
+	var i uint32
+	var j uint32
+	for i=0 ; i < mff.nRows; i++ {
+		for j= 0; j < mff.nColumns; j++ {
+			mff.m[i][j] = ff.Pow(a[i], uint16(j))*h[i]
+		}
+	}
+}
