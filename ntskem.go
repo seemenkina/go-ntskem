@@ -14,6 +14,9 @@ import (
 const (
 	tau = 64 // tau = (d - 1) / 2
 	l   = 256
+	k = 3328
+	n = 4096
+	r = 768 //n-k
 )
 
 type PublicKey struct {
@@ -99,7 +102,135 @@ func (nk *NTSKEM) GenerateKey() {
 
 // Encapsulate uses a given public key produce random key
 // and compute ciphertext encapsulating this key
-func (nk *NTSKEM) Encapsulate() {}
+func (pk PublicKey) Encapsulate() ([]uint16, []uint16){
+	//1. Random error vector
+	e:= randomVector(n,tau)
+
+	//2. Partition e
+	ea := e[:k-l]
+	eb := e[k-l:k]
+	ec := e[k:n]
+
+	//3. Compute ke, using pseudorandom func - sha3
+	ke := sha3.Sum256(BitArrayToByteArray(e))
+	keInBits := ByteArrayToBitArray(ke[:32])
+
+	//4. Construct message vector
+	var m = ea
+	var i uint16 = 0
+	for ; i < l; i++ {
+		m = append(m, keInBits[i])
+	}
+	//5. Encoding of m with Q:
+	cb := PolySum(keInBits, eb)
+	cc := PolySum(pk.Q.PolyOnMatriceMult(m), ec)
+	//cc := PolySum(matrix.PolyOnMatriceMult(m, pk.Q), ec)
+
+	var co []uint16
+	for i=0; i < l;i++{
+		co=append(co,cb[i])
+	}
+	for i=0; i < uint16(len(cc));i++{
+		co=append(co,cc[i])
+	}
+	var seed []uint16
+	for i=0; i < l;i++{
+		seed=append(seed,keInBits[i])
+	}
+	for i=0; i < uint16(len(e));i++{
+		seed=append(seed,e[i])
+	}
+
+	kr := sha3.Sum256(BitArrayToByteArray(seed))
+	return ByteArrayToBitArray(kr[:32]), co
+}
 
 // Decapsulate uses a private key to decrypt a ciphertext
-func (nk *NTSKEM) Decapsulate() {}
+func (sk PrivateKey) Decapsulate (c []uint16) []uint16 {
+	//field gen
+	var ff ff2.FF
+	ff.New(12)
+	/*ab :=a[:l]
+	ac:=a[l:]
+
+	hb := h[:l]
+	hc:=h[l:]*/
+	
+	//1.b Build Transpose matrix.
+	Q := matrix.MatrixFF{}
+	Q.New(l+r, 2*tau)
+	Q.CreateMatrixH(sk.a,sk.h, ff)
+
+	//1.c  Compute all 2τ syndromes of c*
+	var s= Q.PolyOnMatriceMult(c)
+	
+	//1.d Compute the error locator polynomial σ(x) and the first coordinate error indicator ξ 
+	var sigma, xi = ff.BerlekampMasseyAlgorithm(s)
+	
+	//1.e Evaluate the polynomial σ(x) on all elements of F2m
+	var A =	ff.Roots(sigma)
+	
+	//1.f  obtain the error vector e`
+	var e = make([]uint16, n)
+	for i:=0; i <n; i++ {
+		if A[i] == 0{
+			e[i] = 1
+		}
+	}
+	if xi == 1 {
+		e[0] = 1
+	}
+	
+	//2.Apply the permutation
+	e = Permutation(e,sk.p)
+	
+	//3.Consider e = (ea | eb | ec), and compute ke = cb − eb.
+	var eb = e[k-l:k]
+	var cb = c[:l]
+	var cc = c[l:]
+	var ke = PolySum(eb,cb)
+
+	Hl := sha3.Sum256(BitArrayToByteArray(e))
+	var q = BitArrayToByteArray(ke)
+	
+	//4 Verify that H`(e) = ke and hw(e) = τ...
+	var str1 = string(Hl[:])
+	var str2 = string(q[:])
+	var hw uint16
+	for i:=0;i<len(e); i++ {
+		if e[i] == 1 {
+			hw++
+		}
+	}
+	if (str1 == str2 && hw == tau) {
+		var out = ke
+		for i:=0 ; i < len(e); i++ {
+			out = append(out, e[i])
+		}
+		var kr = sha3.Sum256(BitArrayToByteArray(out))
+		return ByteArrayToBitArray(kr[:])
+	} else {
+		var zInBitArray []uint16
+		for  sk.z > 0 {
+			zInBitArray = append(zInBitArray, uint16(sk.z & 0x0001)) //Краш из-за длины z 
+			sk.z = sk.z >> 1 //Не очень хорошо. Стоит завести локальную переменную
+		}
+
+		var out = zInBitArray
+		//1a
+		for i:=0 ; i < k-l; i++ {
+			out = append(out, 1)
+		}
+		//cb
+		for i:=0 ; i < l; i++ {
+			out = append(out, cb[i])
+		}
+		//cc
+		for i:=0 ; i < l; i++ {
+			out = append(out, cc[i])
+		}
+		
+		var kr = sha3.Sum256(BitArrayToByteArray(out))
+		return ByteArrayToBitArray(kr[:])
+	}
+}
