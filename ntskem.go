@@ -234,3 +234,72 @@ func (sk PrivateKey) Decapsulate (c []uint16) []uint16 {
 		return ByteArrayToBitArray(kr[:])
 	}
 }
+//added
+//Использовать генерацию из poly?
+func randomVector (n uint16, t uint16) []uint16 {
+	var e []uint16 = make([]uint16, n-t)
+	for i:=n-t; i <n;i++{
+		e=append(e,1)
+	}
+	//shuffle
+	seed := rand.NewSource(time.Now().UnixNano())
+	random := rand.New(seed)
+	for i:= n-1; i >= n-t; {
+		r:= random.Intn(int(i))
+		e[i], e[r] = e[r], e[i]
+		i=i-1
+	}
+	return e
+}
+
+//Converts BitArray to ByteArray
+func BitArrayToByteArray (BitArray []uint16) []byte{
+	println()
+	print("BITARRAYLEN: ", len(BitArray))
+	var ByteArray []byte = make ([]byte, len(BitArray)/8)
+	for i:=0; i < len(BitArray); i++ {
+		ByteArray[i/8] = ByteArray[i/8] | byte(BitArray[i])
+		if i % 8 != 7 {
+			ByteArray[i/8] <<= 1
+		}
+	}
+	return ByteArray
+}
+
+//added
+//Converts ByteArray to BitArray
+func ByteArrayToBitArray(ByteArray []byte) []uint16{
+	ByteArraylen := len(ByteArray)
+	var BitArray []uint16 = make([]uint16, ByteArraylen*8)
+	for i:=0; i < ByteArraylen; i++ {
+		for j:=7; j >= 0; j--{
+			BitArray[8*i + j] = uint16(ByteArray[i]) & 1
+			ByteArray[i] >>= 1
+		}
+	}
+	return BitArray
+}
+
+//added
+//Polynom Sum
+//Использовать сумму из ff, m =1 ?
+func PolySum(BitArray1, BitArray2 []uint16) []uint16 {
+	if len(BitArray2) > len(BitArray1) {
+		BitArray1, BitArray2 = BitArray2, BitArray1
+	}
+	var SumArray = make ([]uint16, len(BitArray1))
+	copy(SumArray, BitArray1)
+	for i:=0; i < len(BitArray2); i++ {
+		SumArray[i+len(BitArray1)- len(BitArray2)] ^= BitArray2[i]
+	}
+	return SumArray
+}
+
+//added
+func Permutation(e,p []uint16) []uint16{
+	var out = make([]uint16, len(e))
+	for i := 0; i < len(out); i++  {
+		out[i] = e[p[i]]
+	}
+	return out
+}
