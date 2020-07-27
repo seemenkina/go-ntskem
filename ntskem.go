@@ -160,10 +160,9 @@ func (pk PublicKey) Encapsulate() ([]uint16, []uint16) {
 }
 
 // Decapsulate uses a private key to decrypt a ciphertext
-func (sk PrivateKey) Decapsulate(c []uint16) []uint16 {
+func (nk *NTSKEM) Decapsulate(c []uint16) []uint16 {
 	// field gen
-	var ff ff2.FF
-	ff.New(12)
+	var ff = nk.ff
 	/*ab :=a[:l]
 	ac:=a[l:]
 
@@ -209,7 +208,7 @@ func (sk PrivateKey) Decapsulate(c []uint16) []uint16 {
 
 	// 2.Apply the permutation
 	for i := 0; i < len(e); i++ {
-		e[i] = e[sk.p[i]]
+		e[i] = e[nk.privKey[i]]
 	}
 
 	// 3.Consider e = (ea | eb | ec), and compute ke = cb − eb.
