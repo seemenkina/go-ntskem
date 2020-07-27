@@ -257,8 +257,8 @@ func (ff2 *FF) BerlekampMasseyAlgorithm(s []uint16) (*poly.Polynomial, uint16) {
 				Beta[j] = Sigma[j-1]
 			}
 		}
-		for i := 0; i < t+1; i++ {
-			Sigma[i] = fi[i]
+		for j := 0; j < t+1; j++ {
+			Sigma[j] = fi[j]
 		}
 	}
 	SigmaRec := poly.Polynomial{} // //
