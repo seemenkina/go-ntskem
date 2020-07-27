@@ -120,11 +120,21 @@ func (pk PublicKey) Encapsulate() ([]uint16, []uint16) {
 	keInBits := ByteArrayToBitArray(ke[:32])
 
 	// 4. Construct message vector
-	var m = ea
+	/*var m = ea
 	var i uint16 = 0
 	for ; i < l; i++ {
 		m = append(m, keInBits[i])
+	}*/
+	var m = make([]uint16, k) //ИЗМЕНЕНО
+	var i uint16 = 0
+	for ; i < k-l; i++ {
+		//m = append(m, keInBits[i])
+		m[i] = ea[i]
 	}
+	for ; i < k; i++ {
+		m[i] = keInBits[i-k+l]
+	}
+	
 	// 5. Encoding of m with Q:
 	cb := poly.PolySum(keInBits, eb)
 	cc := poly.PolySum(pk.Q.PolyOnMatriceMult(m), ec)
@@ -161,12 +171,24 @@ func (sk PrivateKey) Decapsulate(c []uint16) []uint16 {
 	hc:=h[l:]*/
 
 	// 1.b Build Transpose matrix.
-	Q := matrix.MatrixFF{}
-	Q.New(l+r, 2*tau)
-	Q.CreateMatrixH(sk.a, sk.h, ff)
+	//Q := matrix.MatrixFF{}
+	//Q.New(l+r, 2*tau)
+	//Q.CreateMatrixH(sk.a, sk.h, ff)
 
 	// 1.c  Compute all 2τ syndromes of c*
-	var s = Q.PolyOnMatriceMult(c)
+	//var s = Q.PolyOnMatriceMult(c)
+	var s = make([]uint16, 2*tau)
+	for i:=0; i < n-k+l; i++ {  
+		s[0] = ff.Add(s[0],ff.Mul(c[i], nk.privKey.h[i])) 
+	}
+	for i:=1; i< 2*tau; i++{
+		for j:=0; j < n-k+l; j++ {
+			nk.privKey.h[j] = ff.Mul(nk.privKey.h[j], nk.privKey.a[j])
+		}
+		for j:=0; j < n-k+l; j++ {
+			s[i] = ff.Add(s[i],ff.Mul(c[j], nk.privKey.h[j]))
+		}
+	}
 
 	// 1.d Compute the error locator polynomial σ(x) and the first coordinate error indicator ξ
 	var sigma, xi = ff.BerlekampMasseyAlgorithm(s)
@@ -210,30 +232,41 @@ func (sk PrivateKey) Decapsulate(c []uint16) []uint16 {
 	}
 	var out []uint16
 	if str1 == str2 && hw == tau {
-		out = ke
-		for i := 0; i < len(e); i++ {
+		var out = ke
+		for i:=0 ; i < len(e); i++ {
 			out = append(out, e[i])
+		}
+		var kr = sha3.Sum256(BitArrayToByteArray(out))
+		return ByteArrayToBitArray(kr[:])
 		}
 	} else {
 		var zInBitArray []uint16
-		for sk.z > 0 {
-			zInBitArray = append(zInBitArray, uint16(sk.z&0x0001)) // Краш из-за длины z
-			sk.z = sk.z >> 1                                       // Не очень хорошо. Стоит завести локальную переменную
+		for i:=0; i< len(nk.privKey.z); i++ {
+			for j:=0; j < 8; j++ {
+				zInBitArray = append(zInBitArray, nk.privKey.z[i] & 0x0001)
+				nk.privKey.z[i] >>= 1
+			}
 		}
-
-		var out = zInBitArray
-		// 1a
-		for i := 0; i < k-l; i++ {
+		println()
+		print("sk.z ")
+		for i:=0; i < len(nk.privKey.z); i++ {
+			print(" ", nk.privKey.z[i])
+		}
+		var out []uint16 //zInBitArray
+		//1a
+		for i:=0 ; i < k-l; i++ {
 			out = append(out, 1)
 		}
-		// cb
-		for i := 0; i < l; i++ {
+		//cb
+		for i:=0 ; i < l; i++ {
 			out = append(out, cb[i])
 		}
-		// cc
-		for i := 0; i < l; i++ {
+		//cc
+		for i:=0 ; i < l; i++ {
 			out = append(out, cc[i])
 		}
+		var kr = sha3.Sum256(BitArrayToByteArray(out))
+		return ByteArrayToBitArray(kr[:])
 	}
 	kr := sha3.Sum256(BitArrayToByteArray(out))
 	return ByteArrayToBitArray(kr[:])
